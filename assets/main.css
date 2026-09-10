@@ -1,0 +1,57 @@
+@import "tailwindcss";
+* {
+  transition: all 0.2s ease-in-out;
+  font-family: "Poppins", Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.glassmorphism {
+  backdrop-filter: blur(2px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.opening {
+  animation: opening 1s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: scale;
+}
+
+.closing {
+  animation: close 1s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: scale;
+}
+
+@keyframes opening {
+  0% {
+    scale: 1;
+  }
+  18% {
+    scale: 0.78;
+  }
+  42% {
+    scale: 1.035;
+  }
+  68% {
+    scale: 0.985;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@keyframes close {
+  0% {
+    scale: 1;
+  }
+  18% {
+    scale: 1.06;
+  }
+  42% {
+    scale: 0.975;
+  }
+  68% {
+    scale: 1.012;
+  }
+  100% {
+    scale: 1;
+  }
+}

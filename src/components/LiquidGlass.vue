@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false });
 import { onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from "vue";
+
 type Props = {
   blur?: number;
   draggable?: boolean;
@@ -8,6 +9,14 @@ type Props = {
   centerRefraction?: number;
   bezel?: number;
 };
+
+const props = withDefaults(defineProps<Props>(), {
+  blur: 0,
+  draggable: false,
+  bezel: 20,
+  refraction: 10,
+  centerRefraction: 0.2,
+});
 
 function buildDisplacementMap(
   w: number,
@@ -100,13 +109,6 @@ function buildDisplacementMap(
   return canvas.toDataURL("image/png");
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  blur: 0,
-  draggable: false,
-  bezel: 20,
-  refraction: 40,
-  centerRefraction: 0.1,
-});
 
 function createFilterId() {
   let id = "";
@@ -128,6 +130,7 @@ const supportsSvgBackdropFilter =
 let resizeObserver: ResizeObserver | null = null;
 let intersectionObserver: IntersectionObserver | null = null;
 let rafId = 0;
+let resizeDebounceId = 0;
 
 let isIntersecting = false;
 let renderPending = false;
@@ -186,14 +189,14 @@ function updateFilter(width: number, height: number) {
   const filter = lgFilter.value;
   if (!map || !filter || !dataUri) return;
   const filterPadding = Math.max(Math.abs(props.refraction), 1);
-  filter.setAttribute("x", String(-filterPadding));
-  filter.setAttribute("y", String(-filterPadding));
-  filter.setAttribute("width", String(w + filterPadding * 2));
-  filter.setAttribute("height", String(h + filterPadding * 2));
   map.setAttribute("width", String(w));
   map.setAttribute("height", String(h));
   map.setAttributeNS("http://www.w3.org/1999/xlink", "href", dataUri);
   map.setAttribute("href", dataUri);
+  filter.setAttribute("x", String(-filterPadding));
+  filter.setAttribute("y", String(-filterPadding));
+  filter.setAttribute("width", String(w + filterPadding * 2));
+  filter.setAttribute("height", String(h + filterPadding * 2));
 }
 
 function scheduleRender(width: number, height: number) {
@@ -207,6 +210,12 @@ function requestRender(width: number, height: number) {
     return;
   }
   scheduleRender(width, height);
+}
+
+function requestResizeRender(width: number, height: number) {
+  cancelAnimationFrame(rafId);
+  cancelAnimationFrame(resizeDebounceId);
+  resizeDebounceId = requestAnimationFrame(() => scheduleRender(width, height));
 }
 
 function setGlassEl(el: Element | ComponentPublicInstance | null) {
@@ -246,7 +255,7 @@ onMounted(() => {
       lastObservedWidth = w;
       lastObservedHeight = h;
 
-      requestRender(w, h);
+      requestResizeRender(w, h);
     }
   });
   resizeObserver.observe(glassEl.value, { box: "border-box" });
@@ -290,6 +299,7 @@ onUnmounted(() => {
   resizeObserver?.disconnect();
   intersectionObserver?.disconnect();
   cancelAnimationFrame(rafId);
+  cancelAnimationFrame(resizeDebounceId);
 });
 
 const glass = { filterId, setGlassEl, setLgMap, setLgFilter };
@@ -353,6 +363,7 @@ const glass = { filterId, setGlassEl, setLgMap, setLgFilter };
   box-sizing: border-box;
   translate: var(--glass-drag-x, 0px) var(--glass-drag-y, 0px);
   cursor: v-bind("props.draggable ? 'grab' : 'auto'");
+  touch-action: v-bind("props.draggable ? 'none' : 'auto'");
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
     inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.1),
